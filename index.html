@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enviar texto a JSON API</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      background: radial-gradient(ellipse at top, #1c2940 0, #10141d 55%, #0b0d12 100%); color: #eef2f8;
+    }
+    main { width: min(720px, 100%); border: 1px solid #30394a; border-radius: 20px; padding: clamp(20px, 4vw, 34px); background: rgba(18, 23, 33, .94); box-shadow: 0 24px 80px #0006; }
+    .eyebrow { margin: 0 0 8px; color: #9bb9f7; font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 0 0 10px; font-size: clamp(1.6rem, 4vw, 2.1rem); letter-spacing: -.035em; }
+    .hint { margin: 0 0 24px; color: #aeb8c8; line-height: 1.55; }
+    label { display: block; margin: 0 0 8px; font-size: .93rem; font-weight: 650; }
+    textarea { width: 100%; min-height: 200px; resize: vertical; padding: 14px 15px; border: 1px solid #3b465a; border-radius: 12px; outline: none; background: #0b1018; color: #f4f7fc; font: 15px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    textarea:focus { border-color: #82a9ff; box-shadow: 0 0 0 3px #82a9ff22; }
+    .meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: #8996aa; font-size: .8rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    button { border: 0; border-radius: 10px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+    #send { background: #8bb0ff; color: #101726; }
+    #send:disabled { cursor: wait; opacity: .6; }
+    #clear { border: 1px solid #3b465a; background: transparent; color: #d5ddec; }
+    .status { display: none; margin-top: 18px; padding: 12px 14px; border: 1px solid #3b465a; border-radius: 10px; color: #cbd6e6; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9rem; }
+    .status.show { display: block; }
+    .status.ok { border-color: #28664e; background: #123023; color: #b8f5d5; }
+    .status.err { border-color: #85434b; background: #351a20; color: #ffc5cb; }
+    details { margin-top: 18px; color: #aeb8c8; font-size: .88rem; }
+    summary { cursor: pointer; }
+    pre { overflow-x: auto; margin-bottom: 0; padding: 12px; border-radius: 8px; background: #0b1018; color: #dce6f5; }
+    code { color: #dce6f5; }
+    .foot { margin: 20px 0 0; color: #7f8ba0; font-size: .78rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Public JSON API</p>
+    <h1>Enviar texto</h1>
+    <p class="hint">Escribí texto normal. La página lo convertirá a JSON y reemplazará el valor guardado en la API.</p>
+
+    <form id="sender">
+      <label for="plainText">Texto para enviar</label>
+      <textarea id="plainText" placeholder="Escribí acá..." required></textarea>
+      <div class="meta"><span>Se enviará como JSON: <code>{ "text": "..." }</code></span><span id="counter">0 caracteres</span></div>
+      <div class="actions">
+        <button id="send" type="submit">Enviar a la API</button>
+        <button id="clear" type="button">Limpiar</button>
+      </div>
+    </form>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <details>
+      <summary>Ver el JSON que se enviará</summary>
+      <pre id="preview">{
+  "text": ""
+}</pre>
+    </details>
+
+    <p class="foot">Si la petición falla desde una página alojada en otro dominio, la API debe habilitar CORS. Mirá las instrucciones incluidas con este archivo.</p>
+  </main>
+
+  <script>
+    // Reemplazá este dominio por la URL real de tu servicio en Render.
+    const API_URL = "https://tu-api.onrender.com";
+    const ENDPOINT = `${API_URL.replace(/\/$/, "")}/json`;
+
+    const form = document.querySelector("#sender");
+    const textBox = document.querySelector("#plainText");
+    const sendButton = document.querySelector("#send");
+    const clearButton = document.querySelector("#clear");
+    const statusBox = document.querySelector("#status");
+    const counter = document.querySelector("#counter");
+    const preview = document.querySelector("#preview");
+
+    function getPayload() {
+      return { text: textBox.value };
+    }
+
+    function updatePreview() {
+      counter.textContent = `${textBox.value.length} caracteres`;
+      preview.textContent = JSON.stringify(getPayload(), null, 2);
+    }
+
+    function showStatus(message, kind) {
+      statusBox.textContent = message;
+      statusBox.className = `status show ${kind || ""}`;
+    }
+
+    textBox.addEventListener("input", updatePreview);
+    clearButton.addEventListener("click", () => {
+      textBox.value = "";
+      updatePreview();
+      statusBox.className = "status";
+      textBox.focus();
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!textBox.value.trim()) {
+        showStatus("Escribí algo antes de enviar.", "err");
+        textBox.focus();
+        return;
+      }
+
+      if (API_URL.includes("tu-api.onrender.com")) {
+        showStatus("Primero abrí index.html y cambiá API_URL por la URL real de tu API en Render.", "err");
+        return;
+      }
+
+      sendButton.disabled = true;
+      sendButton.textContent = "Enviando…";
+      showStatus("Enviando JSON…", "");
+
+      try {
+        const response = await fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(getPayload())
+        });
+
+        const bodyText = await response.text();
+        let responseData;
+        try { responseData = JSON.parse(bodyText); }
+        catch { responseData = bodyText || "(respuesta vacía)"; }
+
+        if (!response.ok) {
+          showStatus(`La API respondió con HTTP ${response.status}:\n${typeof responseData === "string" ? responseData : JSON.stringify(responseData, null, 2)}`, "err");
+          return;
+        }
+
+        showStatus(`¡JSON enviado correctamente!\n\nRespuesta de la API:\n${JSON.stringify(responseData, null, 2)}`, "ok");
+      } catch (error) {
+        showStatus("No se pudo completar la petición. Revisá que la URL sea correcta, que Render esté activo y que la API permita CORS desde esta página.\n\nDetalle: " + error.message, "err");
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = "Enviar a la API";
+      }
+    });
+
+    updatePreview();
+  </script>
+</body>
+</html>
