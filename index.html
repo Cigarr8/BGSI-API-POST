@@ -19,7 +19,13 @@
     button { border: 0; border-radius: 9px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; }
     #send { background: #91b3ff; color: #101827; }
     #send:disabled { opacity: .55; cursor: wait; }
-    #clear { background: transparent; color: #e2e8f2; border: 1px solid #46536a; }
+    #clear, #toggleCommands, #clearCommand { background: transparent; color: #e2e8f2; border: 1px solid #46536a; }
+    #commandText { min-height: 100px; }
+    #sendCommand { background: #b6a0ff; color: #171126; }
+    #sendCommand:disabled { opacity: .55; cursor: wait; }
+    #commandsPanel { margin-top: 18px; padding: 16px; border: 1px solid #46536a; border-radius: 12px; background: #101722; }
+    #commandsPanel h2 { margin: 0; font-size: 1.15rem; }
+    [hidden] { display: none !important; }
     details { margin-top: 18px; }
     summary { cursor: pointer; color: #d3dcec; }
     pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: auto; border: 1px solid #30394a; border-radius: 9px; padding: 13px; background: #080d14; color: #dce6f5; font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -45,8 +51,21 @@
     <div class="buttons">
       <button id="send" type="submit">Enviar y verificar</button>
       <button id="clear" type="button">Limpiar</button>
+      <button id="toggleCommands" type="button" aria-expanded="false" aria-controls="commandsPanel">Comandos</button>
     </div>
   </form>
+
+  <section id="commandsPanel" hidden>
+    <h2>Comandos especiales</h2>
+    <p>Escribí exactamente uno de estos comandos: <code>!Autofarm ON</code>, <code>!Autofarm OFF</code> o <code>!HWE</code>. No se acepta ningún otro texto.</p>
+    <label for="commandText">Comando</label>
+    <textarea id="commandText" rows="3" placeholder="!Autofarm ON" spellcheck="false"></textarea>
+    <div class="row"><span>Solo se permiten los 3 comandos indicados.</span><span id="commandCounter">0 caracteres</span></div>
+    <div class="buttons">
+      <button id="sendCommand" type="button">Enviar comando y verificar</button>
+      <button id="clearCommand" type="button">Limpiar comando</button>
+    </div>
+  </section>
 
   <div id="status" role="status" aria-live="polite"></div>
 
@@ -65,12 +84,46 @@
   const textBox = document.querySelector("#plainText");
   const sendButton = document.querySelector("#send");
   const clearButton = document.querySelector("#clear");
+  const toggleCommandsButton = document.querySelector("#toggleCommands");
+  const commandsPanel = document.querySelector("#commandsPanel");
+  const commandTextBox = document.querySelector("#commandText");
+  const commandCounter = document.querySelector("#commandCounter");
+  const sendCommandButton = document.querySelector("#sendCommand");
+  const clearCommandButton = document.querySelector("#clearCommand");
   const statusBox = document.querySelector("#status");
   const counter = document.querySelector("#counter");
   const preview = document.querySelector("#preview");
+  let isSending = false;
+
+  // Cada comando permitido se convierte en el texto exacto que se guarda en la API.
+  const SPECIAL_COMMANDS = {
+    "!Autofarm ON": `--ON
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.X, false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.X, false, game)`,
+    "!Autofarm OFF": `--OFF
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.X, false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.X, false, game)`,
+    "!HWE": `local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+root.CFrame = CFrame.new(
+    -4904.712890625000000,
+    4.351832389831543,
+    -1134.176269531250000
+)`
+  };
 
   function getPayload() {
-    // No trim(), replace(), regex, ni otras transformaciones del texto enviado.
+    // El texto normal se envía sin modificaciones.
     return { text: textBox.value };
   }
 
@@ -108,26 +161,18 @@
     throw new Error("La respuesta de /json no contiene un campo text de tipo string. Revisá el formato de tu server.js.");
   }
 
-  textBox.addEventListener("input", updatePreview);
-
-  clearButton.addEventListener("click", () => {
-    textBox.value = "";
-    updatePreview();
-    statusBox.className = "";
-    textBox.focus();
-  });
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const originalText = textBox.value;
-
+  async function sendAndVerify(originalText, sourceLabel) {
     if (originalText.length === 0) {
       showStatus("El cuadro está vacío.", "err");
       return;
     }
+    if (isSending) return;
 
+    isSending = true;
     sendButton.disabled = true;
+    sendCommandButton.disabled = true;
     sendButton.textContent = "Enviando y verificando…";
+    sendCommandButton.textContent = "Enviando y verificando…";
     showStatus("Enviando JSON…");
 
     try {
@@ -148,7 +193,7 @@
       // Volver a leer el valor realmente guardado y comparar carácter por carácter.
       const savedText = await readApiText();
       if (savedText === originalText) {
-        showStatus(`Verificado: la API guardó exactamente el mismo texto.\nCaracteres enviados: ${originalText.length}\nNo se añadieron ni cambiaron barras, comillas ni saltos de línea.`, "ok");
+        showStatus(`Verificado: la API guardó exactamente el mismo texto.\nTipo: ${sourceLabel}\nCaracteres enviados: ${originalText.length}\nNo se añadieron ni cambiaron barras, comillas ni saltos de línea.`, "ok");
       } else {
         showStatus(
           `La API respondió al envío, pero el texto leído luego no coincide exactamente.\nTexto original: ${originalText.length} caracteres\nTexto leído: ${savedText.length} caracteres\n\nEsto indica que hay que revisar el server.js desplegado o el formato de la respuesta de la API.`,
@@ -161,9 +206,53 @@
         "err"
       );
     } finally {
+      isSending = false;
       sendButton.disabled = false;
+      sendCommandButton.disabled = false;
       sendButton.textContent = "Enviar y verificar";
+      sendCommandButton.textContent = "Enviar comando y verificar";
     }
+  }
+
+  textBox.addEventListener("input", updatePreview);
+  commandTextBox.addEventListener("input", () => {
+    commandCounter.textContent = `${commandTextBox.value.length} caracteres`;
+  });
+
+  toggleCommandsButton.addEventListener("click", () => {
+    const opening = commandsPanel.hidden;
+    commandsPanel.hidden = !opening;
+    toggleCommandsButton.setAttribute("aria-expanded", String(opening));
+    if (opening) commandTextBox.focus();
+  });
+
+  clearButton.addEventListener("click", () => {
+    textBox.value = "";
+    updatePreview();
+    statusBox.className = "";
+    textBox.focus();
+  });
+
+  clearCommandButton.addEventListener("click", () => {
+    commandTextBox.value = "";
+    commandCounter.textContent = "0 caracteres";
+    statusBox.className = "";
+    commandTextBox.focus();
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await sendAndVerify(textBox.value, "texto normal");
+  });
+
+  sendCommandButton.addEventListener("click", async () => {
+    const command = commandTextBox.value;
+    // Coincidencia estricta: no se recorta ni se modifica lo escrito.
+    if (!Object.prototype.hasOwnProperty.call(SPECIAL_COMMANDS, command)) {
+      showStatus("Comando no válido. Usá exactamente: !Autofarm ON, !Autofarm OFF o !HWE.", "err");
+      return;
+    }
+    await sendAndVerify(SPECIAL_COMMANDS[command], `comando ${command}`);
   });
 
   updatePreview();
