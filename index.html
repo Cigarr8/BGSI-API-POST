@@ -265,6 +265,45 @@ VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`
   });
 
   updatePreview();
+
+  // ===== WAKE UP AUTOMÁTICO =====
+
+const WAKE_INTERVAL_MS = 5 * 60 * 1000;
+
+function generateWakeValue() {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const letter = letters[Math.floor(Math.random() * letters.length)];
+    const number = Math.floor(Math.random() * 10);
+
+    return letter + number;
+}
+
+async function sendWakeValue() {
+    const wakeValue = generateWakeValue();
+
+    try {
+        const response = await fetch(ENDPOINT, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                wake: wakeValue
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+        }
+
+        console.log("INFORME | Wake enviado: " + wakeValue);
+    } catch (error) {
+        console.error("INFORME | Error al enviar wake:", error);
+    }
+}
+
+sendWakeValue();
+setInterval(sendWakeValue, WAKE_INTERVAL_MS);
 </script>
 </body>
 </html>
