@@ -102,7 +102,11 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.X, false, game)
 task.wait(0.1)
-VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.X, false, game)`,
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.X, false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Z, false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Z, false, game)`,
     "!Autofarm OFF": `--OFF
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
@@ -119,7 +123,12 @@ root.CFrame = CFrame.new(
     -4904.712890625000000,
     4.351832389831543,
     -1134.176269531250000
-)`
+)
+
+local VirtualInputManager = game:GetService("VirtualInputManager")
+VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`
   };
 
   function getPayload() {
