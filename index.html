@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="es">
 <head>
@@ -43,11 +44,13 @@
 
   <form id="sender">
     <label for="plainText">Texto para enviar</label>
-    <textarea id="plainText" placeholder='Pegá acá tu texto o código...' spellcheck="false"></textarea>
+    <textarea id="plainText" placeholder="Pegá acá tu texto o código..." spellcheck="false"></textarea>
+
     <div class="row">
       <span id="counter">0 caracteres</span>
       <span>El texto se envía tal cual está en el cuadro.</span>
     </div>
+
     <div class="buttons">
       <button id="send" type="submit">Enviar y verificar</button>
       <button id="clear" type="button">Limpiar</button>
@@ -57,10 +60,23 @@
 
   <section id="commandsPanel" hidden>
     <h2>Comandos especiales</h2>
-    <p>Escribí exactamente uno de estos comandos: <code>!Autofarm ON</code>, <code>!Autofarm OFF</code> o <code>!HWE</code>. No se acepta ningún otro texto.</p>
+    <p>
+      Escribí exactamente uno de estos comandos:
+      <code>!Autofarm ON</code>,
+      <code>!Autofarm OFF</code>,
+      <code>!HWE</code>
+      o
+      <code>!backup</code>.
+    </p>
+
     <label for="commandText">Comando</label>
-    <textarea id="commandText" rows="3" placeholder="!Autofarm ON" spellcheck="false"></textarea>
-    <div class="row"><span>Solo se permiten los 3 comandos indicados.</span><span id="commandCounter">0 caracteres</span></div>
+    <textarea id="commandText" rows="3" placeholder="!backup" spellcheck="false"></textarea>
+
+    <div class="row">
+      <span>Solo se permiten los 4 comandos indicados.</span>
+      <span id="commandCounter">0 caracteres</span>
+    </div>
+
     <div class="buttons">
       <button id="sendCommand" type="button">Enviar comando y verificar</button>
       <button id="clearCommand" type="button">Limpiar comando</button>
@@ -72,32 +88,39 @@
   <details>
     <summary>Vista previa del JSON (puede mostrar caracteres escapados)</summary>
     <pre id="preview"></pre>
-    <p class="note">En JSON, los saltos de línea se representan como <code>\n</code>, las comillas como <code>\"</code> y las barras invertidas como <code>\\</code>. Eso es normal en la representación JSON; al decodificar el campo <code>text</code>, se recupera el texto original. Las barras normales <code>/</code> no las agrega esta página.</p>
+    <p class="note">
+      En JSON, los saltos de línea se representan como <code>\n</code>,
+      las comillas como <code>\"</code> y las barras invertidas como
+      <code>\\</code>. Eso es normal en la representación JSON; al decodificar
+      el campo <code>text</code>, se recupera el texto original.
+    </p>
   </details>
 </main>
 
 <script>
-  const API_URL = "https://public-json-api.onrender.com";
-  const ENDPOINT = `${API_URL.replace(/\/+$/, "")}/json`;
+const API_URL = "https://public-json-api.onrender.com";
+const ENDPOINT = `${API_URL.replace(/\/+$/, "")}/json`;
 
-  const form = document.querySelector("#sender");
-  const textBox = document.querySelector("#plainText");
-  const sendButton = document.querySelector("#send");
-  const clearButton = document.querySelector("#clear");
-  const toggleCommandsButton = document.querySelector("#toggleCommands");
-  const commandsPanel = document.querySelector("#commandsPanel");
-  const commandTextBox = document.querySelector("#commandText");
-  const commandCounter = document.querySelector("#commandCounter");
-  const sendCommandButton = document.querySelector("#sendCommand");
-  const clearCommandButton = document.querySelector("#clearCommand");
-  const statusBox = document.querySelector("#status");
-  const counter = document.querySelector("#counter");
-  const preview = document.querySelector("#preview");
-  let isSending = false;
+const form = document.querySelector("#sender");
+const textBox = document.querySelector("#plainText");
+const sendButton = document.querySelector("#send");
+const clearButton = document.querySelector("#clear");
+const toggleCommandsButton = document.querySelector("#toggleCommands");
+const commandsPanel = document.querySelector("#commandsPanel");
+const commandTextBox = document.querySelector("#commandText");
+const commandCounter = document.querySelector("#commandCounter");
+const sendCommandButton = document.querySelector("#sendCommand");
+const clearCommandButton = document.querySelector("#clearCommand");
+const statusBox = document.querySelector("#status");
+const counter = document.querySelector("#counter");
+const preview = document.querySelector("#preview");
 
-  // Cada comando permitido se convierte en el texto exacto que se guarda en la API.
-  const SPECIAL_COMMANDS = {
-    "!Autofarm ON": `--ON
+let isSending = false;
+
+// Cada comando permitido se convierte en el texto exacto que se guarda en la API.
+const SPECIAL_COMMANDS = {
+
+  "!Autofarm ON": `--ON
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.X, false, game)
@@ -107,219 +130,288 @@ task.wait(0.1)
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Z, false, game)
 task.wait(0.1)
 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Z, false, game)`,
-    "!Autofarm OFF": `--OFF
+
+  "!Autofarm OFF": `--OFF
 local VirtualInputManager = game:GetService("VirtualInputManager")
 
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.X, false, game)
 task.wait(0.1)
 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.X, false, game)`,
-    "!HWE": `local Players = game:GetService("Players")
+
+  "!HWE": `local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local character = player.Character or player.CharacterAdded:Wait()
 local root = character:WaitForChild("HumanoidRootPart")
 
 root.CFrame = CFrame.new(
-    -4904.712890625000000,
-    4.351832389831543,
-    -1134.176269531250000
+   -4904.712890625000000,
+   4.351832389831543,
+   -1134.176269531250000
 )
 
 local VirtualInputManager = game:GetService("VirtualInputManager")
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
 task.wait(0.1)
 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`,
-        "!Luminant": `local Players = game:GetService("Players")
+
+  "!Luminant": `local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 
 local character = player.Character or player.CharacterAdded:Wait()
 local root = character:WaitForChild("HumanoidRootPart")
 
 root.CFrame = CFrame.new(
-    -4909.257324218750000,                                                                     
-    4.351832389831543,
-    -1126.079345703125000         
+   -4909.257324218750000,
+   4.351832389831543,
+   -1126.079345703125000
 )
 
 local VirtualInputManager = game:GetService("VirtualInputManager")
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
 task.wait(0.1)
-VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`
-  };
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`,
 
-  function getPayload() {
-    // El texto normal se envía sin modificaciones.
-    return { text: textBox.value };
+  // BACKUP: presiona 6 una sola vez
+  "!backup": `local VirtualInputManager = game:GetService("VirtualInputManager")
+
+VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Six, false, game)
+task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Six, false, game)`
+};
+
+function getPayload() {
+  return { text: textBox.value };
+}
+
+function updatePreview() {
+  counter.textContent = `${textBox.value.length} caracteres`;
+  preview.textContent = JSON.stringify(getPayload(), null, 2);
+}
+
+function showStatus(message, kind = "") {
+  statusBox.textContent = message;
+  statusBox.className = `show ${kind}`;
+}
+
+async function readApiText() {
+  const response = await fetch(ENDPOINT, {
+    method: "GET",
+    headers: { "Accept": "application/json" },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    throw new Error(`GET /json respondió HTTP ${response.status}`);
   }
 
-  function updatePreview() {
-    counter.textContent = `${textBox.value.length} caracteres`;
-    preview.textContent = JSON.stringify(getPayload(), null, 2);
+  const data = await response.json();
+
+  let current = data;
+
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth++) {
+    if (typeof current.text === "string") return current.text;
+
+    if (current.value && typeof current.value === "object") {
+      current = current.value;
+    } else if (current.received && typeof current.received === "object") {
+      current = current.received;
+    } else {
+      break;
+    }
   }
 
-  function showStatus(message, kind = "") {
-    statusBox.textContent = message;
-    statusBox.className = `show ${kind}`;
+  throw new Error(
+    "La respuesta de /json no contiene un campo text de tipo string. Revisá el formato de tu server.js."
+  );
+}
+
+async function sendAndVerify(originalText, sourceLabel) {
+  if (originalText.length === 0) {
+    showStatus("El cuadro está vacío.", "err");
+    return;
   }
 
-  async function readApiText() {
+  if (isSending) return;
+
+  isSending = true;
+
+  sendButton.disabled = true;
+  sendCommandButton.disabled = true;
+
+  sendButton.textContent = "Enviando y verificando…";
+  sendCommandButton.textContent = "Enviando y verificando…";
+
+  showStatus("Enviando JSON…");
+
+  try {
     const response = await fetch(ENDPOINT, {
-      method: "GET",
-      headers: { "Accept": "application/json" },
-      cache: "no-store"
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ text: originalText })
     });
-    if (!response.ok) throw new Error(`GET /json respondió HTTP ${response.status}`);
-    const data = await response.json();
 
-    // Compatible tanto con {"text":"..."} como con {"value":{"text":"..."}}.
-    let current = data;
-    for (let depth = 0; depth < 5 && current && typeof current === "object"; depth++) {
-      if (typeof current.text === "string") return current.text;
-      if (current.value && typeof current.value === "object") {
-        current = current.value;
-      } else if (current.received && typeof current.received === "object") {
-        current = current.received;
-      } else {
-        break;
-      }
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `POST /json respondió HTTP ${response.status}.\n${responseText}`
+      );
     }
-    throw new Error("La respuesta de /json no contiene un campo text de tipo string. Revisá el formato de tu server.js.");
-  }
 
-  async function sendAndVerify(originalText, sourceLabel) {
-    if (originalText.length === 0) {
-      showStatus("El cuadro está vacío.", "err");
-      return;
-    }
-    if (isSending) return;
+    const savedText = await readApiText();
 
-    isSending = true;
-    sendButton.disabled = true;
-    sendCommandButton.disabled = true;
-    sendButton.textContent = "Enviando y verificando…";
-    sendCommandButton.textContent = "Enviando y verificando…";
-    showStatus("Enviando JSON…");
-
-    try {
-      const response = await fetch(ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({ text: originalText })
-      });
-
-      const responseText = await response.text();
-      if (!response.ok) {
-        throw new Error(`POST /json respondió HTTP ${response.status}.\n${responseText}`);
-      }
-
-      // Volver a leer el valor realmente guardado y comparar carácter por carácter.
-      const savedText = await readApiText();
-      if (savedText === originalText) {
-        showStatus(`Verificado: la API guardó exactamente el mismo texto.\nTipo: ${sourceLabel}\nCaracteres enviados: ${originalText.length}\nNo se añadieron ni cambiaron barras, comillas ni saltos de línea.`, "ok");
-      } else {
-        showStatus(
-          `La API respondió al envío, pero el texto leído luego no coincide exactamente.\nTexto original: ${originalText.length} caracteres\nTexto leído: ${savedText.length} caracteres\n\nEsto indica que hay que revisar el server.js desplegado o el formato de la respuesta de la API.`,
-          "err"
-        );
-      }
-    } catch (error) {
+    if (savedText === originalText) {
       showStatus(
-        `No se pudo verificar el texto.\n${error.message}\n\nRevisá que Render esté activo y que server.js tenga CORS habilitado.`,
+        `Verificado: la API guardó exactamente el mismo texto.
+Tipo: ${sourceLabel}
+Caracteres enviados: ${originalText.length}
+No se añadieron ni cambiaron barras, comillas ni saltos de línea.`,
+        "ok"
+      );
+    } else {
+      showStatus(
+        `La API respondió al envío, pero el texto leído luego no coincide exactamente.
+Texto original: ${originalText.length} caracteres
+Texto leído: ${savedText.length} caracteres
+
+Esto indica que hay que revisar el server.js desplegado o el formato de la respuesta de la API.`,
         "err"
       );
-    } finally {
-      isSending = false;
-      sendButton.disabled = false;
-      sendCommandButton.disabled = false;
-      sendButton.textContent = "Enviar y verificar";
-      sendCommandButton.textContent = "Enviar comando y verificar";
     }
+
+  } catch (error) {
+    showStatus(
+      `No se pudo verificar el texto.
+${error.message}
+
+Revisá que Render esté activo y que server.js tenga CORS habilitado.`,
+      "err"
+    );
+
+  } finally {
+    isSending = false;
+
+    sendButton.disabled = false;
+    sendCommandButton.disabled = false;
+
+    sendButton.textContent = "Enviar y verificar";
+    sendCommandButton.textContent = "Enviar comando y verificar";
+  }
+}
+
+textBox.addEventListener("input", updatePreview);
+
+commandTextBox.addEventListener("input", () => {
+  commandCounter.textContent = `${commandTextBox.value.length} caracteres`;
+});
+
+toggleCommandsButton.addEventListener("click", () => {
+  const opening = commandsPanel.hidden;
+
+  commandsPanel.hidden = !opening;
+
+  toggleCommandsButton.setAttribute(
+    "aria-expanded",
+    String(opening)
+  );
+
+  if (opening) {
+    commandTextBox.focus();
+  }
+});
+
+clearButton.addEventListener("click", () => {
+  textBox.value = "";
+  updatePreview();
+  statusBox.className = "";
+  textBox.focus();
+});
+
+clearCommandButton.addEventListener("click", () => {
+  commandTextBox.value = "";
+  commandCounter.textContent = "0 caracteres";
+  statusBox.className = "";
+  commandTextBox.focus();
+});
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  await sendAndVerify(
+    textBox.value,
+    "texto normal"
+  );
+});
+
+sendCommandButton.addEventListener("click", async () => {
+  const command = commandTextBox.value;
+
+  // Coincidencia estricta: no se recorta ni se modifica lo escrito.
+  if (!Object.prototype.hasOwnProperty.call(SPECIAL_COMMANDS, command)) {
+    showStatus(
+      "Comando no válido. Usá exactamente: !Autofarm ON, !Autofarm OFF, !HWE o !backup.",
+      "err"
+    );
+    return;
   }
 
-  textBox.addEventListener("input", updatePreview);
-  commandTextBox.addEventListener("input", () => {
-    commandCounter.textContent = `${commandTextBox.value.length} caracteres`;
-  });
+  await sendAndVerify(
+    SPECIAL_COMMANDS[command],
+    `comando ${command}`
+  );
+});
 
-  toggleCommandsButton.addEventListener("click", () => {
-    const opening = commandsPanel.hidden;
-    commandsPanel.hidden = !opening;
-    toggleCommandsButton.setAttribute("aria-expanded", String(opening));
-    if (opening) commandTextBox.focus();
-  });
+updatePreview();
 
-  clearButton.addEventListener("click", () => {
-    textBox.value = "";
-    updatePreview();
-    statusBox.className = "";
-    textBox.focus();
-  });
 
-  clearCommandButton.addEventListener("click", () => {
-    commandTextBox.value = "";
-    commandCounter.textContent = "0 caracteres";
-    statusBox.className = "";
-    commandTextBox.focus();
-  });
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    await sendAndVerify(textBox.value, "texto normal");
-  });
-
-  sendCommandButton.addEventListener("click", async () => {
-    const command = commandTextBox.value;
-    // Coincidencia estricta: no se recorta ni se modifica lo escrito.
-    if (!Object.prototype.hasOwnProperty.call(SPECIAL_COMMANDS, command)) {
-      showStatus("Comando no válido. Usá exactamente: !Autofarm ON, !Autofarm OFF o !HWE.", "err");
-      return;
-    }
-    await sendAndVerify(SPECIAL_COMMANDS[command], `comando ${command}`);
-  });
-
-  updatePreview();
-
-  // ===== WAKE UP AUTOMÁTICO =====
+// ===== WAKE UP AUTOMÁTICO =====
 
 const WAKE_INTERVAL_MS = 5 * 60 * 1000;
 
 function generateWakeValue() {
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const letter = letters[Math.floor(Math.random() * letters.length)];
-    const number = Math.floor(Math.random() * 10);
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const letter = letters[Math.floor(Math.random() * letters.length)];
+  const number = Math.floor(Math.random() * 10);
 
-    return letter + number;
+  return letter + number;
 }
 
 async function sendWakeValue() {
-    const wakeValue = generateWakeValue();
+  const wakeValue = generateWakeValue();
 
-    try {
-        const response = await fetch(ENDPOINT, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                wake: wakeValue
-            })
-        });
+  try {
+    const response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        wake: wakeValue
+      })
+    });
 
-        if (!response.ok) {
-            throw new Error("HTTP " + response.status);
-        }
-
-        console.log("INFORME | Wake enviado: " + wakeValue);
-    } catch (error) {
-        console.error("INFORME | Error al enviar wake:", error);
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
     }
+
+    console.log("INFORME | Wake enviado: " + wakeValue);
+
+  } catch (error) {
+    console.error(
+      "INFORME | Error al enviar wake:",
+      error
+    );
+  }
 }
 
 sendWakeValue();
 setInterval(sendWakeValue, WAKE_INTERVAL_MS);
 </script>
+
 </body>
 </html>
+```
