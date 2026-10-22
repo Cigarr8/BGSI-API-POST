@@ -128,6 +128,22 @@ root.CFrame = CFrame.new(
 local VirtualInputManager = game:GetService("VirtualInputManager")
 VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
 task.wait(0.1)
+VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`,
+        "!Luminant": `local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+root.CFrame = CFrame.new(
+    -4909.257324218750000,                                                                     
+    4.351832389831543,
+    -1126.079345703125000         
+)
+
+local VirtualInputManager = game:GetService("VirtualInputManager")
+VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
+task.wait(0.1)
 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`
   };
 
