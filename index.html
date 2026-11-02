@@ -20,8 +20,19 @@
     button { border: 0; border-radius: 9px; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; }
     #send { background: #91b3ff; color: #101827; }
     #send:disabled { opacity: .55; cursor: wait; }
-    #clear, #toggleCommands, #clearCommand { background: transparent; color: #e2e8f2; border: 1px solid #46536a; }
+    #clear, #toggleCommands, #clearCommand, #toggleDelay, #clearDelay, #cancelDelay { background: transparent; color: #e2e8f2; border: 1px solid #46536a; }
     #commandText { min-height: 100px; }
+    #delayText { min-height: 180px; }
+    #delayPanel { margin-top: 18px; padding: 16px; border: 1px solid #46536a; border-radius: 12px; background: #101722; }
+    #delayPanel h2 { margin: 0; font-size: 1.15rem; }
+    .delay-settings { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-top: 14px; }
+    .delay-settings label { margin: 0 0 7px; }
+    .delay-settings input, .delay-settings select { min-height: 42px; padding: 9px 11px; border: 1px solid #46536a; border-radius: 9px; background: #080d14; color: #f5f7fb; font: inherit; }
+    .delay-settings input { width: 130px; }
+    .delay-settings select { min-width: 130px; }
+    #scheduleDelay { background: #b6a0ff; color: #171126; }
+    #scheduleDelay:disabled, #cancelDelay:disabled { opacity: .55; cursor: not-allowed; }
+    #delayCountdown { margin: 12px 0 0; color: #c5d2e6; font-size: .9rem; }
     #sendCommand { background: #b6a0ff; color: #171126; }
     #sendCommand:disabled { opacity: .55; cursor: wait; }
     #commandsPanel { margin-top: 18px; padding: 16px; border: 1px solid #46536a; border-radius: 12px; background: #101722; }
@@ -55,8 +66,44 @@
       <button id="send" type="submit">Enviar y verificar</button>
       <button id="clear" type="button">Limpiar</button>
       <button id="toggleCommands" type="button" aria-expanded="false" aria-controls="commandsPanel">Comandos</button>
+      <button id="toggleDelay" type="button" aria-expanded="false" aria-controls="delayPanel">Delay</button>
     </div>
   </form>
+
+  <section id="delayPanel" hidden>
+    <h2>Enviar con delay</h2>
+    <p>Escribí el script y elegí cuánto tiempo debe pasar antes de enviarlo a la API.</p>
+
+    <label for="delayText">Script para enviar</label>
+    <textarea id="delayText" rows="7" placeholder="Pegá acá el script que querés enviar más tarde..." spellcheck="false"></textarea>
+    <div class="row">
+      <span>El contenido se enviará exactamente como está escrito.</span>
+      <span id="delayCounter">0 caracteres</span>
+    </div>
+
+    <div class="delay-settings">
+      <div>
+        <label for="delayAmount">Esperar</label>
+        <input id="delayAmount" type="number" min="1" step="1" value="10" inputmode="numeric">
+      </div>
+      <div>
+        <label for="delayUnit">Unidad</label>
+        <select id="delayUnit">
+          <option value="1000">Segundos</option>
+          <option value="60000">Minutos</option>
+          <option value="3600000">Horas</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="scheduleDelay" type="button">Programar envío</button>
+      <button id="cancelDelay" type="button" disabled>Cancelar envío</button>
+      <button id="clearDelay" type="button">Limpiar script</button>
+    </div>
+    <p id="delayCountdown" role="status" aria-live="polite">No hay ningún envío programado.</p>
+    <p class="note">La página debe permanecer abierta para que se cumpla el temporizador. Si la cerrás o actualizás, el envío programado se cancela.</p>
+  </section>
 
   <section id="commandsPanel" hidden>
     <h2>Comandos especiales</h2>
@@ -107,6 +154,16 @@ const sendButton = document.querySelector("#send");
 const clearButton = document.querySelector("#clear");
 const toggleCommandsButton = document.querySelector("#toggleCommands");
 const commandsPanel = document.querySelector("#commandsPanel");
+const toggleDelayButton = document.querySelector("#toggleDelay");
+const delayPanel = document.querySelector("#delayPanel");
+const delayTextBox = document.querySelector("#delayText");
+const delayCounter = document.querySelector("#delayCounter");
+const delayAmountInput = document.querySelector("#delayAmount");
+const delayUnitSelect = document.querySelector("#delayUnit");
+const scheduleDelayButton = document.querySelector("#scheduleDelay");
+const cancelDelayButton = document.querySelector("#cancelDelay");
+const clearDelayButton = document.querySelector("#clearDelay");
+const delayCountdown = document.querySelector("#delayCountdown");
 const commandTextBox = document.querySelector("#commandText");
 const commandCounter = document.querySelector("#commandCounter");
 const sendCommandButton = document.querySelector("#sendCommand");
@@ -116,6 +173,9 @@ const counter = document.querySelector("#counter");
 const preview = document.querySelector("#preview");
 
 let isSending = false;
+let delayTimeout = null;
+let delayInterval = null;
+let delayTargetTime = null;
 
 // Cada comando permitido se convierte en el texto exacto que se guarda en la API.
 const SPECIAL_COMMANDS = {
@@ -192,6 +252,48 @@ function updatePreview() {
 function showStatus(message, kind = "") {
   statusBox.textContent = message;
   statusBox.className = `show ${kind}`;
+}
+
+function formatRemainingTime(milliseconds) {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds]
+    .map(value => String(value).padStart(2, "0"))
+    .join(":");
+}
+
+function updateDelayCountdown() {
+  if (delayTargetTime === null) return;
+
+  const remaining = delayTargetTime - Date.now();
+  if (remaining <= 0) {
+    delayCountdown.textContent = "Tiempo cumplido. Preparando el envío…";
+    return;
+  }
+
+  delayCountdown.textContent = `Envío programado. Tiempo restante: ${formatRemainingTime(remaining)}`;
+}
+
+function clearDelayTimer() {
+  if (delayTimeout !== null) {
+    clearTimeout(delayTimeout);
+    delayTimeout = null;
+  }
+  if (delayInterval !== null) {
+    clearInterval(delayInterval);
+    delayInterval = null;
+  }
+  delayTargetTime = null;
+  scheduleDelayButton.disabled = false;
+  cancelDelayButton.disabled = true;
+}
+
+async function waitForSendAvailability() {
+  while (isSending) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
 }
 
 async function readApiText() {
@@ -322,6 +424,92 @@ toggleCommandsButton.addEventListener("click", () => {
   if (opening) {
     commandTextBox.focus();
   }
+});
+
+toggleDelayButton.addEventListener("click", () => {
+  const opening = delayPanel.hidden;
+
+  delayPanel.hidden = !opening;
+  toggleDelayButton.setAttribute("aria-expanded", String(opening));
+
+  if (opening) {
+    delayTextBox.focus();
+  }
+});
+
+delayTextBox.addEventListener("input", () => {
+  delayCounter.textContent = `${delayTextBox.value.length} caracteres`;
+});
+
+scheduleDelayButton.addEventListener("click", () => {
+  const script = delayTextBox.value;
+  const amount = Number(delayAmountInput.value);
+  const unitMilliseconds = Number(delayUnitSelect.value);
+  const delayMilliseconds = amount * unitMilliseconds;
+  const maximumTimeout = 2147483647;
+
+  if (script.length === 0) {
+    showStatus("El cuadro de Delay está vacío.", "err");
+    delayTextBox.focus();
+    return;
+  }
+
+  if (!Number.isFinite(amount) || amount < 1 || !Number.isInteger(amount)) {
+    showStatus("Ingresá un tiempo válido de al menos 1 unidad.", "err");
+    delayAmountInput.focus();
+    return;
+  }
+
+  if (!Number.isFinite(delayMilliseconds) || delayMilliseconds > maximumTimeout) {
+    showStatus("El tiempo máximo permitido es de aproximadamente 24 días.", "err");
+    delayAmountInput.focus();
+    return;
+  }
+
+  if (delayTimeout !== null) {
+    showStatus("Ya hay un envío programado. Cancelalo antes de crear otro.", "err");
+    return;
+  }
+
+  const scheduledScript = script;
+  const scheduledLabel = `Delay (${amount} ${delayUnitSelect.selectedOptions[0].text.toLowerCase()})`;
+  delayTargetTime = Date.now() + delayMilliseconds;
+  scheduleDelayButton.disabled = true;
+  cancelDelayButton.disabled = false;
+  updateDelayCountdown();
+  delayInterval = setInterval(updateDelayCountdown, 250);
+  showStatus(`Script programado para enviarse en ${amount} ${delayUnitSelect.selectedOptions[0].text.toLowerCase()}.`, "ok");
+
+  delayTimeout = setTimeout(async () => {
+    delayTimeout = null;
+    if (delayInterval !== null) {
+      clearInterval(delayInterval);
+      delayInterval = null;
+    }
+    delayTargetTime = null;
+    scheduleDelayButton.disabled = false;
+    cancelDelayButton.disabled = true;
+    delayCountdown.textContent = "Tiempo cumplido. Enviando script a la API…";
+
+    await waitForSendAvailability();
+    await sendAndVerify(scheduledScript, scheduledLabel);
+    delayCountdown.textContent = "El envío programado terminó. Podés programar otro.";
+  }, delayMilliseconds);
+});
+
+cancelDelayButton.addEventListener("click", () => {
+  if (delayTimeout === null) return;
+
+  clearDelayTimer();
+  delayCountdown.textContent = "Envío programado cancelado.";
+  showStatus("Se canceló el envío programado. No se mandó el script a la API.");
+});
+
+clearDelayButton.addEventListener("click", () => {
+  delayTextBox.value = "";
+  delayCounter.textContent = "0 caracteres";
+  showStatus("Script de Delay limpiado.");
+  delayTextBox.focus();
 });
 
 clearButton.addEventListener("click", () => {
