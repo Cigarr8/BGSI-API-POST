@@ -232,6 +232,11 @@ VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.L, false, game)
 task.wait(0.1)
 VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.L, false, game)`,
 
+    "!AutoRejoinON": `local env = (getgenv and getgenv()) or _G
+env.isOn = true`,
+
+      "!AutoRejoinOFF": `local env = (getgenv and getgenv()) or _G
+env.isOn = false`,
   // BACKUP: presiona 6 una sola vez
   "!backup": `local VirtualInputManager = game:GetService("VirtualInputManager")
 
